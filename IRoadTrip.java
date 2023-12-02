@@ -139,7 +139,14 @@ public class IRoadTrip {
             while ((line = reader.readLine()) != null) {
                 if (line.contains("2020-12-31")) {
                     String[] lineArr = line.split("\t");
-                    map.put(lineArr[2].toLowerCase(), lineArr[1]);
+                    if (lineArr[2].contains("(")) {
+                        System.out.println(lineArr[2]);
+                        String[] parens = lineArr[2].split("(");
+                        String left = parens
+                    } else {
+                        map.put(lineArr[2].toLowerCase(), lineArr[1]);
+                    }
+
                 }
             }
         } catch (Exception e) {
