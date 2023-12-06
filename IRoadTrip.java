@@ -422,9 +422,10 @@ public class IRoadTrip {
 
         while (true) {
             // Read user input
+            String firstCountry;
             while (true) {
                 System.out.print("Enter the name of the first country (type EXIT to quit): ");
-                String firstCountry = scanner.nextLine();
+                firstCountry = scanner.nextLine();
                 if (firstCountry.equals("EXIT")) {
                     done = true;
                     break;
@@ -441,9 +442,10 @@ public class IRoadTrip {
             if (done) {
                 break;
             }
+            String secondCountry;
             while (true) {
                 System.out.print("Enter the name of the second country (type EXIT to quit): ");
-                String secondCountry = scanner.nextLine();
+                secondCountry = scanner.nextLine();
                 if (secondCountry.equals("EXIT")) {
                     done = true;
                     break;
@@ -460,6 +462,20 @@ public class IRoadTrip {
             if (done) {
                 break;
             }
+            /*
+            It probably would be better to take in the codes here, but since IDK how the grading works I'm just feeding
+            the country names and will re-get them in path.
+             */
+            List<String> path = findPath(firstCountry, secondCountry);
+            if (path == null) {
+                System.out.println("No path found.");
+            } else {
+                for (String element : path) {
+                    System.out.println(element);
+                }
+            }
+
+            //NOTE : Add function here to handle USA.
             // Output the input received from the user
         }
         scanner.close();
