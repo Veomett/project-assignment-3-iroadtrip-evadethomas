@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.lang.System.clearProperty;
 import static java.lang.System.exit;
 
 public class IRoadTrip {
@@ -14,8 +15,9 @@ public class IRoadTrip {
     static HashMap<String, String> finalNameMap;
     static HashMap<String, HashMap<String, Integer>> nameBorderDistance;
     static HashMap<String, HashMap<String, Integer>> allDistancesCap;
-
     static HashMap<String, String> notFound;
+
+    static HashMap<String, HashMap<String, String>> aliases;
 
 
 
@@ -32,6 +34,7 @@ public class IRoadTrip {
         nameBorderDistance = new HashMap<>();
         allDistancesCap = new HashMap<>();
         notFound = new HashMap<>();
+        aliases = new HashMap<>();
 
 
 
@@ -43,9 +46,21 @@ public class IRoadTrip {
         * searches on of these, it will find the proper key. */
         setIDsForfinalNameMap();
         handleNotFoundHashMap();
+        //printHashMap(nameBorderDistance, "  ");
+        //printHashMap(allDistancesCap, " ");
+        rewriteNameBorderDistanceWithIds();
+
+        //printHashMap(nameBorderDistance, "  ");
+        printHashMap(stateNameMap, "  ");
+        //printKeysMap(allDistancesCap, " ");
+
+
 
 
     }
+
+
+
     private static void printHashMap(Map<?, ?> map, String indent) {
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             Object key = entry.getKey();
@@ -59,6 +74,47 @@ public class IRoadTrip {
             }
         }
     }
+
+    private static void printKeysMap(Map<?, ?> map, String indent) {
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            Object key = entry.getKey();
+            Object value = entry.getValue();
+                System.out.println(key);
+
+        }
+    }
+
+
+    public void rewriteNameBorderDistanceWithIds() {
+        HashMap<String, HashMap<String, Integer>> newBorderMap = new HashMap<>();
+
+        for (Map.Entry<String, HashMap<String, Integer>> outerEntry : nameBorderDistance.entrySet()) {
+            String outerKey = outerEntry.getKey();
+            HashMap<String, Integer> innerMap = outerEntry.getValue();
+
+            String newOuterKey = finalNameMap.get(outerKey);
+            HashMap<String, Integer> newMap = new HashMap<>();
+            // Iterate through the inner HashMap
+            for (Map.Entry<String, Integer> innerEntry : innerMap.entrySet()) {
+
+                String innerKey = innerEntry.getKey();
+
+                String newInnerKey = finalNameMap.get(innerKey);
+
+                HashMap<String, Integer> getDisMap = allDistancesCap.get(newOuterKey);
+                if (getDisMap != null) {
+                    Integer value = getDisMap.get(newInnerKey);
+                    newMap.put(newInnerKey, value);
+                } else {
+                    newMap.put("check for problem: " + newInnerKey + " " + innerKey, null);
+                }
+            }
+            newBorderMap.put(newOuterKey, newMap);
+        }
+
+        nameBorderDistance = newBorderMap;
+    }
+
     public String findLikelyMatch(String name) {
 
         String[] words = name.split(" ");
@@ -98,24 +154,47 @@ public class IRoadTrip {
         Also error I'm feeling too lazy to try and fix: sometimes the "findLikelyMatch" returns the wrong one.
          */
         System.out.println("New ones");
-        printHashMap(notFound, "    ");
+        //printHashMap(notFound, "    ");
         //dhekelia is not found
         notFound.put("french guiana", "PNG");
         notFound.put("eswatini", "SWA");
         notFound.put("south korea", "ROK");
         notFound.put("korea, south", "ROK");
-        //san marino is landlocked, so not in boarders
+        notFound.put("monaco", null);
+        notFound.put("andorra", null);
+        notFound.put("north korea", "PRK");
+        notFound.put("korea, north", "PRK");
+        notFound.put("uk", "UKG");
+        notFound.put("uae", "UAE");
+        notFound.put("congo, republic of the", "CON");
+        notFound.put("macau", null);
+        notFound.put("us", "USA");
+        notFound.put("congo, republic of the", "CON");
+        notFound.put("republic of the congo", "CON");
+        notFound.put("united states of america", "USA");
+        //ALSO found come country codes that are different in the actual distance map:
+
+        notFound.put("uk", "UK");
+        notFound.put("united kingdom", "UK");
+
+        //System.out.println("NEW new ones");
+        //printHashMap(notFound, "    ");
+        //Update final map with corrected edge cases
+        finalNameMap.putAll(notFound);
+        stateNameMap.putAll(notFound);
+        stateNameMap.putAll(finalNameMap);
+
 
 
 
         // will add to finalNameMap
-
 
     }
     public void addOtherPossibleNames() {
         HashMap<String, String> tempMap = new HashMap<>();
 
         for (String key : stateNameMap.keySet()) {
+
             String name = key;
             //The case a name contains parenthesis
             boolean commaHandled = false;
@@ -127,7 +206,7 @@ public class IRoadTrip {
                 //The case either side of the parenthesis contains a comma
                 if (left.contains(",")) {
                     String[] comArr = left.split(",");
-                    left = comArr[1].trim() + comArr[0];
+                    left = comArr[1].trim() + " " + comArr[0];
                     tempMap.put(left, stateNameMap.get(name));
                     commaHandled = true;
                 }
@@ -137,7 +216,7 @@ public class IRoadTrip {
 
                 if (right.contains(",")) {
                     String[] comArr = right.split(",");
-                    right = comArr[1].trim() + comArr[0];
+                    right = comArr[1].trim() + " " + comArr[0];
                     tempMap.put(right, stateNameMap.get(name));
                     commaHandled = true;
                 }
@@ -146,7 +225,7 @@ public class IRoadTrip {
             //The case it contains a comma AND paren hasn't been handled yet
             if (name.contains(",") && commaHandled == false) {
                 String[] comArr = name.split(",");
-                String newName = comArr[1].trim() + comArr[0];
+                String newName = comArr[1].trim() + " " + comArr[0];
                 tempMap.put(newName, stateNameMap.get(name));
             }
 
@@ -162,8 +241,9 @@ public class IRoadTrip {
             }
 
         }
-
         stateNameMap.putAll(tempMap);
+        System.out.println("tempMap");
+        printHashMap(aliases, " ");
     }
 
     public void setIDsForfinalNameMap() {
@@ -198,7 +278,7 @@ public class IRoadTrip {
             String newName = name;
             if (name.contains(",") && ID == null) {
                 String[] comArr = name.split(",");
-                newName = comArr[1].trim() + comArr[0];
+                newName = comArr[1].trim() + " " + comArr[0];
                 ID = stateNameMap.get(newName);
                 tempMap.put(newName, null);
             }
@@ -225,10 +305,10 @@ public class IRoadTrip {
             } else {
                 notFound.put(name, ID);
             }
-
         }
 
         //printHashMap(finalNameMap, "    ");
+        System.out.println("Not found");
         printHashMap(notFound, "    ");
     }
 
@@ -284,7 +364,6 @@ public class IRoadTrip {
                 if (line.contains("kmdist")) {
                     continue;
                 }
-                //System.out.println(line);
                 String[] capInfo = line.split(",");
                 String country1 = capInfo[1];
                 String country2 = capInfo[3];
