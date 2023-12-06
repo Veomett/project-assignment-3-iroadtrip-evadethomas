@@ -1,10 +1,7 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.sql.SQLOutput;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static java.lang.System.clearProperty;
 import static java.lang.System.exit;
@@ -36,11 +33,11 @@ public class IRoadTrip {
         notFound = new HashMap<>();
         aliases = new HashMap<>();
 
+        System.out.println(args[0]);
 
-
-        getStateName();
-        getBoardersName();
-        getDistances();
+        getStateName(args[2]);
+        getBoardersName(args[0]);
+        getDistances(args[1]);
         addOtherPossibleNames();
         /*setIDsForFinalNameMap adds all similar/differently formatted names to the stateNameMap, so if the user
         * searches on of these, it will find the proper key. */
@@ -49,7 +46,6 @@ public class IRoadTrip {
         //printHashMap(nameBorderDistance, "  ");
         //printHashMap(allDistancesCap, " ");
         rewriteNameBorderDistanceWithIds();
-
         //printHashMap(nameBorderDistance, "  ");
         printHashMap(stateNameMap, "  ");
         //printKeysMap(allDistancesCap, " ");
@@ -312,8 +308,8 @@ public class IRoadTrip {
         printHashMap(notFound, "    ");
     }
 
-    public void getBoardersName() {
-        try (BufferedReader reader = new BufferedReader(new FileReader("borders.txt"))) {
+    public void getBoardersName(String file) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] origin = line.split(" = ");
@@ -357,8 +353,8 @@ public class IRoadTrip {
 
     }
 
-    public void getDistances() {
-        try (BufferedReader reader = new BufferedReader(new FileReader("capdist.csv"))) {
+    public void getDistances(String file) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (line.contains("kmdist")) {
@@ -388,8 +384,8 @@ public class IRoadTrip {
         }
 
     }
-    public void getStateName() {
-        try (BufferedReader reader = new BufferedReader(new FileReader("state_name.tsv"))) {
+    public void getStateName(String file) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (line.contains("2020-12-31")) {
@@ -421,6 +417,54 @@ public class IRoadTrip {
 
     public void acceptUserInput() {
         // Replace with your code
+        Scanner scanner = new Scanner(System.in);
+        boolean done = false;
+
+        while (true) {
+            // Read user input
+            while (true) {
+                System.out.print("Enter the name of the first country (type EXIT to quit): ");
+                String firstCountry = scanner.nextLine();
+                if (firstCountry.equals("EXIT")) {
+                    done = true;
+                    break;
+                }
+                firstCountry = firstCountry.toLowerCase();
+                if (stateNameMap.get(firstCountry) == null) {
+                    System.out.println("Invalid country name. Please enter a valid country name.");
+                } else {
+                    System.out.println(stateNameMap.get(firstCountry));
+                    break;
+                }
+
+            }
+            if (done) {
+                break;
+            }
+            while (true) {
+                System.out.print("Enter the name of the second country (type EXIT to quit): ");
+                String secondCountry = scanner.nextLine();
+                if (secondCountry.equals("EXIT")) {
+                    done = true;
+                    break;
+                }
+                secondCountry = secondCountry.toLowerCase();
+                if (stateNameMap.get(secondCountry) == null) {
+                    System.out.println("Invalid country name. Please enter a valid country name.");
+                } else {
+                    System.out.println(stateNameMap.get(secondCountry));
+                    break;
+                }
+
+            }
+            if (done) {
+                break;
+            }
+            // Output the input received from the user
+        }
+        scanner.close();
+
+        // Close the scanner
 
 
         System.out.println("IRoadTrip - skeleton");
@@ -429,7 +473,6 @@ public class IRoadTrip {
 
     public static void main(String[] args) {
         IRoadTrip a3 = new IRoadTrip(args);
-
         a3.acceptUserInput();
     }
 
