@@ -18,6 +18,8 @@ public class IRoadTrip {
 
     static PriorityQueue<HashMap.Entry<String, Integer>> queue;
 
+    static ArrayList<String> noBoarderCountries;
+
 
 
     public IRoadTrip (String [] args) {
@@ -34,7 +36,12 @@ public class IRoadTrip {
         allDistancesCap = new HashMap<>();
         notFound = new HashMap<>();
         aliases = new HashMap<>();
-        queue = new  PriorityQueue<HashMap.Entry<String, Integer>>();
+        noBoarderCountries = new ArrayList();
+
+        Comparator<Map.Entry<String, Integer>> OGcomparator = Comparator.comparingInt(Map.Entry::getValue);
+        Comparator<Map.Entry<String, Integer>> comparator = OGcomparator.reversed();
+        queue = new  PriorityQueue<HashMap.Entry<String, Integer>>(comparator);
+
 
         System.out.println(args[0]);
 
@@ -46,13 +53,9 @@ public class IRoadTrip {
         * searches on of these, it will find the proper key. */
         setIDsForfinalNameMap();
         handleNotFoundHashMap();
-        //printHashMap(nameBorderDistance, "  ");
-        System.out.println("Printing for Amaya: ");
-        printHashMap(allDistancesCap, " ");
         rewriteNameBorderDistanceWithIds();
-        //printHashMap(nameBorderDistance, "  ");
-        printHashMap(stateNameMap, "  ");
-        //printKeysMap(allDistancesCap, " ");
+        IDsPointToSelves();
+
 
 
 
@@ -79,14 +82,25 @@ public class IRoadTrip {
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             Object key = entry.getKey();
             Object value = entry.getValue();
-                System.out.println(key);
+               // System.out.println(key);
 
         }
+    }
+
+    public static void IDsPointToSelves() {
+        HashMap<String,String> tempHash = new HashMap<>();
+        for (String value : stateNameMap.values()) {
+            if (value != null) {
+                tempHash.put(value.toLowerCase(), value);
+            }
+        }
+        stateNameMap.putAll(tempHash);
     }
 
 
     public void rewriteNameBorderDistanceWithIds() {
         HashMap<String, HashMap<String, Integer>> newBorderMap = new HashMap<>();
+        boolean doNotAdd = false;
 
         for (Map.Entry<String, HashMap<String, Integer>> outerEntry : nameBorderDistance.entrySet()) {
             String outerKey = outerEntry.getKey();
@@ -102,14 +116,21 @@ public class IRoadTrip {
                 String newInnerKey = finalNameMap.get(innerKey);
 
                 HashMap<String, Integer> getDisMap = allDistancesCap.get(newOuterKey);
+
                 if (getDisMap != null) {
                     Integer value = getDisMap.get(newInnerKey);
-                    newMap.put(newInnerKey, value);
+                    if (value != null && newInnerKey != null) {
+                        newMap.put(newInnerKey, value);
+                    }
+                    doNotAdd = false;
                 } else {
-                    newMap.put("check for problem: " + newInnerKey + " " + innerKey, null);
+                    doNotAdd = true;
                 }
             }
-            newBorderMap.put(newOuterKey, newMap);
+            if (doNotAdd == false) {
+                newBorderMap.put(newOuterKey, newMap);
+            }
+
         }
 
         nameBorderDistance = newBorderMap;
@@ -153,7 +174,7 @@ public class IRoadTrip {
         /* Needed to use this for a littttle hard-coding, the ones that are completely different and theres no way to tell.
         Also error I'm feeling too lazy to try and fix: sometimes the "findLikelyMatch" returns the wrong one.
          */
-        System.out.println("New ones");
+        //System.out.println("New ones");
         //printHashMap(notFound, "    ");
         //dhekelia is not found
         notFound.put("french guiana", "PNG");
@@ -242,8 +263,8 @@ public class IRoadTrip {
 
         }
         stateNameMap.putAll(tempMap);
-        System.out.println("tempMap");
-        printHashMap(aliases, " ");
+        //System.out.println("tempMap");
+        //printHashMap(aliases, " ");
     }
 
     public void setIDsForfinalNameMap() {
@@ -308,8 +329,8 @@ public class IRoadTrip {
         }
 
         //printHashMap(finalNameMap, "    ");
-        System.out.println("Not found");
-        printHashMap(notFound, "    ");
+        //System.out.println("Not found");
+        //printHashMap(notFound, "    ");
     }
 
     public void getBoardersName(String file) {
@@ -335,9 +356,12 @@ public class IRoadTrip {
                         destMap.put(finalDest.toLowerCase(), 0);
                     }
                     nameBorderDistance.put(origin[0].toLowerCase(), destMap);
+                } else {
+                    noBoarderCountries.add(origin[0].toLowerCase());
                 }
             }
         } catch (Exception e) {
+            System.out.println("Error collecting file. Printing stack trace for debugging: ");
             e.printStackTrace();
             exit(0);
         }
@@ -379,10 +403,10 @@ public class IRoadTrip {
                     innerMap.put(country2, kilom);
                 }
             }
-
             //printHashMap(allDistancesCap, "  ");
 
         } catch (Exception e) {
+            System.out.println("Error collecting file. Printing stack trace for debugging: ");
             e.printStackTrace();
             exit(0);
         }
@@ -393,9 +417,11 @@ public class IRoadTrip {
         HashMap<String, String> bordersDisSource =  finalNameMap;
         HashMap<String, Integer> convertedMap = new HashMap<>();
         for (HashMap.Entry<String, String> entry : finalNameMap.entrySet()) {
+            if (entry.getValue() == null) {
+                continue;
+            }
             convertedMap.put(entry.getValue(), Integer.MAX_VALUE);
         }
-
         return convertedMap;
     }
 
@@ -404,6 +430,16 @@ public class IRoadTrip {
         HashMap<String, Boolean> convertedMap = new HashMap<>();
         for (HashMap.Entry<String, String> entry : finalNameMap.entrySet()) {
             convertedMap.put(entry.getValue(), false);
+        }
+
+        return convertedMap;
+    }
+
+    public HashMap<String, String> createPathMap() {
+        HashMap<String, String> bordersDisSource =  finalNameMap;
+        HashMap<String, String> convertedMap = new HashMap<>();
+        for (HashMap.Entry<String, String> entry : finalNameMap.entrySet()) {
+            convertedMap.put(entry.getValue(), null);
         }
 
         return convertedMap;
@@ -419,10 +455,10 @@ public class IRoadTrip {
                 }
             }
         } catch (Exception e) {
+            System.out.println("Error collecting file. Printing stack trace for debugging: ");
             e.printStackTrace();
             exit(0);
         }
-        //printHashMap(stateNameMap, "    ");
     }
 
 
@@ -434,25 +470,95 @@ public class IRoadTrip {
             return 0;
         }
 
-        HashMap<String, Integer> disMap = allDistancesCap.get(country1);
+
+
+        HashMap<String, Integer> disMap = nameBorderDistance.get(country1);
 
 
 
         System.out.println(country1);
         System.out.println(country2);
-
-        if (disMap.get(country2) != null) {
-            return disMap.get(country2);
+        if (disMap != null) {
+            if (disMap.get(country2) != null) {
+                return disMap.get(country2);
+            }
         }
+
 
         return -1;
     }
+    public List<String> findTheRealPath(HashMap<String, String> predecessors, String country1, String country2) {
+        LinkedList<String> path = new LinkedList<>();
+        String current = country2;
+
+        while (current != null) {
+            path.addFirst(current);
+            current = predecessors.get(current);
+        }
+        if (path.getFirst().equals(country1)) {
+            return path;
+        }
+        return null;
+    }
+
+    public List<String> findPath(String country1, String country2) {
+
+        String count1 = stateNameMap.get(country1);
+        String count2 = stateNameMap.get(country2);
+
+        HashMap<String, Integer> distances = new HashMap<>();
+        for (String node : nameBorderDistance.keySet()) {
+            distances.put(node, Integer.MAX_VALUE);
+        }
+        distances.put(count1, 0); // Set distance for the start node as 0
+
+        HashMap<String, String> predecessors = new HashMap<>();
+        HashSet<String> visited = new HashSet<>();
+
+        PriorityQueue<String> queue = new PriorityQueue<>(Comparator.comparingInt(distances::get));
+        queue.add(count1);
+
+        while (!queue.isEmpty()) {
+            String v = queue.poll();
+
+            if (v.equals(count2)) {
+                break;
+            }
+
+            if (visited.contains(v)) {
+                continue;
+            }
+            visited.add(v);
+
+            HashMap<String, Integer> innerMap = nameBorderDistance.get(v);
+            if (innerMap == null) {
+                continue; // Handle potential null values
+            }
+
+            for (String nab : innerMap.keySet()) {
+                int newDist = distances.get(v) + innerMap.get(nab);
+                if (newDist < distances.get(nab)) {
+                    distances.put(nab, newDist);
+                    predecessors.put(nab, v);
+                    queue.remove(nab); // Remove and re-add to update priority
+                    queue.add(nab);
+                }
+            }
+        }
+
+        return findTheRealPath(predecessors, count1, count2);
+    }
 
 
+
+
+/*
     public List<String> findPath (String country1, String country2) {
-        // Replace with your code
+
         HashMap<String, Integer> allDistances = createDistanceMap();
         HashMap<String, Boolean> knownNodes = createKnownMap();
+        HashMap<String, String> pathHash = createPathMap();
+
         System.out.println("Printing now");
         printHashMap(allDistances, " ");
 
@@ -464,9 +570,22 @@ public class IRoadTrip {
             queue.add(entry);
         }
 
+
+
+
+
+
         while (true) {
             HashMap.Entry<String, Integer> vEntry = queue.poll();
+
+            System.out.println("polled: " + vEntry);
             copyForQueueRemake.remove(vEntry);
+
+            if (vEntry.getKey() == null) {
+                System.out.println("broke");
+                break;
+            }
+
             String v = vEntry.getKey();
             Integer vCost = vEntry.getValue();
             knownNodes.put(v, true);
@@ -475,31 +594,41 @@ public class IRoadTrip {
 
 
             for (String key : keys) {
+
                 HashMap<String, Integer> temp = nameBorderDistance.get(v);
                 if (allDistances.get(key) > (vCost + temp.get(key))) {
-                    allDistances.put(key, temp.get(key));
+                    allDistances.put(key, vCost + temp.get(key));
                     for (HashMap.Entry<String, Integer> entry : copyForQueueRemake.entrySet()) {
                         queue.add(entry);
                     }
+                    pathHash.put(v, key);
 
+                    PriorityQueue<Map.Entry<String, Integer>> copyQueue = new PriorityQueue<>(queue);
 
-
+                    while (!copyQueue.isEmpty()) {
+                        Map.Entry<String, Integer> entry = copyQueue.poll();
+                        System.out.println(entry.getKey() + ": " + entry.getValue());
+                    }
                 }
             }
-            break;
+
+            if (v == country2) {
+                break;
+            }
 
         }
-
         return null;
     }
 
-
+*/
     public void acceptUserInput() {
         // Replace with your code
         Scanner scanner = new Scanner(System.in);
         boolean done = false;
 
+
         while (true) {
+            boolean noPath = false;
             // Read user input
             String firstCountry;
             while (true) {
@@ -509,8 +638,12 @@ public class IRoadTrip {
                     done = true;
                     break;
                 }
+                if (noBoarderCountries.contains(firstCountry.toLowerCase())) {
+                    noPath = true;
+                    break;
+                }
                 firstCountry = firstCountry.toLowerCase();
-                if ((stateNameMap.get(firstCountry) == null) && (nameBorderDistance.get(firstCountry.toUpperCase()) == null)) {
+                if (stateNameMap.get(firstCountry) == null) {
                     System.out.println("Invalid country name. Please enter a valid country name.");
                 } else {
                     //EVA take this out before submission
@@ -530,8 +663,12 @@ public class IRoadTrip {
                     done = true;
                     break;
                 }
+                if (noBoarderCountries.contains(firstCountry.toLowerCase())) {
+                    noPath = true;
+                    break;
+                }
                 secondCountry = secondCountry.toLowerCase();
-                if ((stateNameMap.get(secondCountry) == null) && (nameBorderDistance.get(secondCountry.toUpperCase()) == null)) {
+                if (stateNameMap.get(secondCountry) == null) {
                     System.out.println("Invalid country name. Please enter a valid country name.");
                 } else {
                     //EVA take this out before submission
@@ -540,6 +677,10 @@ public class IRoadTrip {
                 }
             }
             if (done) {
+                break;
+            }
+            if (noPath == true) {
+                System.out.println("No path found");
                 break;
             }
             /*
