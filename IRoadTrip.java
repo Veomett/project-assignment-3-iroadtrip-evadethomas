@@ -109,22 +109,28 @@ public class IRoadTrip {
         nameBorderDistance = newBorderMap;
     }
 
-
+    //Takes in a string, and looks through the aliases and names to see if there is something similar it could be
+    //NOTE: This isn't the most reliable, it only gets the MOST LIKELY, but it saved me a lot of time and made for
+    //less hard-coding.
     public String findLikelyMatch(String name) {
-
         String[] words = name.split(" ");
         String ID = null;
+        //Iterate through keys of state name map
         for (String key : stateNameMap.keySet()) {
+            //Count the same words in both names
             int sameWordCount = 0;
             for (int i = 0; i < words.length; i++) {
                 if (key.contains(words[i])) {
                     sameWordCount += 1;
                 }
             }
+            //if length is the same as the name we're looking for, set the key to that name
             if (sameWordCount == words.length) {
                 ID = stateNameMap.get(key);
                 break;
             } else {
+                //Otherwise, check to see if there's a similar first half, if there is add it.
+                //else if does the same with the second half.
                 String subName = name.substring(0, name.length() / 2);
                 if (key.contains(subName)) {
                     ID = stateNameMap.get(key);
