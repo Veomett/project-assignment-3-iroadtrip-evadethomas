@@ -1,127 +1,114 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.sql.SQLOutput;
 import java.util.*;
-
-import static java.lang.System.clearProperty;
 import static java.lang.System.exit;
-
+/** author Eva DeThomas
+ *  This program uses Dijkstra's algorithm to find the shortest path from one country to another by car given
+ *  a border, capital city distance, and country code file.
+ * */
 public class IRoadTrip {
-
+//See each static variable in constructor
     static HashMap<String, String> stateNameMap;
     static HashMap<String, String> finalNameMap;
     static HashMap<String, HashMap<String, Integer>> nameBorderDistance;
     static HashMap<String, HashMap<String, Integer>> allDistancesCap;
     static HashMap<String, String> notFound;
-
-    static HashMap<String, HashMap<String, String>> aliases;
-
     static PriorityQueue<HashMap.Entry<String, Integer>> queue;
-
-    static ArrayList<String> noBoarderCountries;
+    static ArrayList<String> noBorderCountries;
 
 
 
     public IRoadTrip (String [] args) {
 
+        //The state name map contains all the names from the stateName file, and eventually includes aliases as well.
         stateNameMap = new HashMap<>();
+        //The finalName map contains the state names mapped to the keys that fit perfectly with the border file.
+        //(Aliases not included, edge cases handled so it can read them)
         finalNameMap = new HashMap<>();
+        //While being built, contains the border names and the distances to each country it borders, but
+        //later, it contains the codes of each country and the distance
         nameBorderDistance = new HashMap<>();
+        //This contains all the distances from the cap distance file, connected to their 3-letter codes, regardless of
+        //whether it's a border or not
         allDistancesCap = new HashMap<>();
+        //Contains all the names that weren't connected to the country codes, so they have a function that handles and
+        //fixes them
         notFound = new HashMap<>();
-        aliases = new HashMap<>();
-        noBoarderCountries = new ArrayList();
+        //Countries that have no borders, program will return no path for these.
+        noBorderCountries = new ArrayList();
 
-        Comparator<Map.Entry<String, Integer>> OGcomparator = Comparator.comparingInt(Map.Entry::getValue);
-        Comparator<Map.Entry<String, Integer>> comparator = OGcomparator.reversed();
-        queue = new  PriorityQueue<HashMap.Entry<String, Integer>>(comparator);
-
+        //All of the following construct the main hashmap that's used in Dijkstras:
+        //The first three read in the files, and make the hashmaps described above.
         getStateName(args[2]);
         getBoardersName(args[0]);
         getDistances(args[1]);
+        //This cross-referances the files and reformats some of the names in case the user types in something similar,
+        //but different then expected
         addOtherPossibleNames();
-        /*setIDsForFinalNameMap adds all similar/differently formatted names to the stateNameMap, so if the user
-        * searches on of these, it will find the proper key. */
+        //Adds the IDs to a "final name map" where there is only one correct key for every value
         setIDsForfinalNameMap();
+        //Adds in all of the not found names, and connects them to the proper code.
         handleNotFoundHashMap();
+        //Changes the sames in the name map to Ids, so they can easily seach in the capDistanceMap
         rewriteNameBorderDistanceWithIds();
+        //Adds to the map so "USA" is an acceptable input from the user, rather than just United States
         IDsPointToSelves();
 
     }
 
-
-
-    private static void printHashMap(Map<?, ?> map, String indent) {
-        for (Map.Entry<?, ?> entry : map.entrySet()) {
-            Object key = entry.getKey();
-            Object value = entry.getValue();
-
-            if (value instanceof Map<?, ?>) {
-                System.out.println(indent + key + " -> ");
-                printHashMap((Map<?, ?>) value, indent + "    ");
-            } else {
-                System.out.println(indent + key + " -> " + value);
-            }
-        }
-    }
-
-    private static void printKeysMap(Map<?, ?> map, String indent) {
-        for (Map.Entry<?, ?> entry : map.entrySet()) {
-            Object key = entry.getKey();
-            Object value = entry.getValue();
-               // System.out.println(key);
-
-        }
-    }
-
     public static void IDsPointToSelves() {
         HashMap<String,String> tempHash = new HashMap<>();
+        //Iterates through the values of the stateNameMap and adds the code as aliases that point
+        //to themselves.
         for (String value : stateNameMap.values()) {
             if (value != null) {
                 tempHash.put(value.toLowerCase(), value);
             }
         }
+        //Add all the values from the tempMap to the state name map
         stateNameMap.putAll(tempHash);
     }
 
 
     public void rewriteNameBorderDistanceWithIds() {
         HashMap<String, HashMap<String, Integer>> newBorderMap = new HashMap<>();
-        boolean doNotAdd = false;
+        boolean doNotAdd;
 
-        for (Map.Entry<String, HashMap<String, Integer>> outerEntry : nameBorderDistance.entrySet()) {
-            String outerKey = outerEntry.getKey();
-            HashMap<String, Integer> innerMap = outerEntry.getValue();
-
+        //Iterating through nameBorderDistance, starting wiht country1 (outter loop)
+        for (String outerKey : nameBorderDistance.keySet()) {
+            //Getting the innerMap, (country 2 and sitance)
+            HashMap<String, Integer> innerMap = nameBorderDistance.get(outerKey);
+            //Getting the ID from the finalNameMap
             String newOuterKey = finalNameMap.get(outerKey);
+            //Initializing new inner map for the IDs
             HashMap<String, Integer> newMap = new HashMap<>();
-            // Iterate through the inner HashMap
-            for (Map.Entry<String, Integer> innerEntry : innerMap.entrySet()) {
 
-                String innerKey = innerEntry.getKey();
+            doNotAdd = true;
 
+            // Iterate through the inner map (country2 and the distance)
+            for (String innerKey : innerMap.keySet()) {
+                //Getting the actual ID out
                 String newInnerKey = finalNameMap.get(innerKey);
 
                 HashMap<String, Integer> getDisMap = allDistancesCap.get(newOuterKey);
-
-                if (getDisMap != null) {
+                //Getting the new map, insert to it ONLY if there are no null values (IE, the country actually exists)
+                if (getDisMap != null && newInnerKey != null) {
                     Integer value = getDisMap.get(newInnerKey);
-                    if (value != null && newInnerKey != null) {
+                    if (value != null) {
                         newMap.put(newInnerKey, value);
+                        doNotAdd = false;
                     }
-                    doNotAdd = false;
-                } else {
-                    doNotAdd = true;
                 }
             }
-            if (doNotAdd == false) {
+            //If the country doesn't exist/is null oro is an edge case, skip adding it to the list.
+            if (!doNotAdd) {
                 newBorderMap.put(newOuterKey, newMap);
             }
-
         }
-
+        //reinitialize the main hashmap, to the hashmap with the IDs.
         nameBorderDistance = newBorderMap;
     }
+
 
     public String findLikelyMatch(String name) {
 
@@ -250,8 +237,6 @@ public class IRoadTrip {
 
         }
         stateNameMap.putAll(tempMap);
-        //System.out.println("tempMap");
-        //printHashMap(aliases, " ");
     }
 
     public void setIDsForfinalNameMap() {
@@ -344,7 +329,7 @@ public class IRoadTrip {
                     }
                     nameBorderDistance.put(origin[0].toLowerCase(), destMap);
                 } else {
-                    noBoarderCountries.add(origin[0].toLowerCase());
+                    noBorderCountries.add(origin[0].toLowerCase());
                 }
             }
         } catch (Exception e) {
@@ -469,29 +454,29 @@ public class IRoadTrip {
 
         return -1;
     }
-    public List<String> findTheRealPath(HashMap<String, String> predecessors, String country1, String country2) {
+    public List<String> findTheRealPath(HashMap<String, String> last, String country1, String country2) {
         LinkedList<String> path = new LinkedList<>();
         String current = country2;
 
-        Map<String, String> reversedMap = new HashMap<>();
+        HashMap<String, String> nameBackMap = new HashMap<>();
         for (Map.Entry<String, String> entry : finalNameMap.entrySet()) {
-            reversedMap.put(entry.getValue(), entry.getKey());
+            nameBackMap.put(entry.getValue(), entry.getKey());
         }
 
         while (current != null) {
             path.addFirst(current);
-            current = predecessors.get(current);
+            current = last.get(current);
         }
 
         if (path.getFirst().equals(country1)) {
             LinkedList<String> formattedPath = new LinkedList<>();
             for (int i = 0; i < path.size() - 1; i++) {
-                String currentElement = capitalizeWords(reversedMap.get(path.get(i)));
-                String nextElement = capitalizeWords(reversedMap.get(path.get(i + 1)));
+                String currentElement = capitalizeWords(nameBackMap.get(path.get(i)));
+                String nextElement = capitalizeWords(nameBackMap.get(path.get(i + 1)));
                 HashMap<String, Integer> temp = nameBorderDistance.get(path.get(i));
                 Integer kiloms = temp.get(path.get(i + 1));
 
-                String finalFormat = currentElement + " --> " + nextElement + " (" + kiloms + "km.)";
+                String finalFormat = currentElement + " --> " + nextElement + " (" + kiloms + " km.)";
                 finalFormat.replaceAll(" Of ", " of ");
 
                 formattedPath.add(finalFormat);
@@ -501,8 +486,8 @@ public class IRoadTrip {
         } else {
             return null;
         }
-
     }
+
 
     public static String capitalizeWords(String given) {
         char[] arr = given.toCharArray();
@@ -526,16 +511,16 @@ public class IRoadTrip {
         String count1 = stateNameMap.get(country1);
         String count2 = stateNameMap.get(country2);
 
-        HashMap<String, Integer> distances = new HashMap<>();
+        HashMap<String, Integer> costs = new HashMap<>();
         for (String node : nameBorderDistance.keySet()) {
-            distances.put(node, Integer.MAX_VALUE);
+            costs.put(node, Integer.MAX_VALUE);
         }
-        distances.put(count1, 0); // Set distance for the start node as 0
+        costs.put(count1, 0); // Set cost for the start node as 0
 
-        HashMap<String, String> predecessors = new HashMap<>();
-        HashSet<String> visited = new HashSet<>();
+        HashMap<String, String> last = new HashMap<>();
+        HashSet<String> known = new HashSet<>();
 
-        PriorityQueue<String> queue = new PriorityQueue<>(Comparator.comparingInt(distances::get));
+        PriorityQueue<String> queue = new PriorityQueue<>(Comparator.comparingInt(costs::get));
         queue.add(count1);
 
         while (!queue.isEmpty()) {
@@ -545,10 +530,10 @@ public class IRoadTrip {
                 break;
             }
 
-            if (visited.contains(v)) {
+            if (known.contains(v)) {
                 continue;
             }
-            visited.add(v);
+            known.add(v);
 
             HashMap<String, Integer> innerMap = nameBorderDistance.get(v);
             if (innerMap == null) {
@@ -556,91 +541,20 @@ public class IRoadTrip {
             }
 
             for (String nab : innerMap.keySet()) {
-                int newDist = distances.get(v) + innerMap.get(nab);
-                if (newDist < distances.get(nab)) {
-                    distances.put(nab, newDist);
-                    predecessors.put(nab, v);
+                int cumulCost = costs.get(v) + innerMap.get(nab);
+                if (cumulCost < costs.get(nab)) {
+                    costs.put(nab, cumulCost);
+                    last.put(nab, v);
                     queue.remove(nab); // Remove and re-add to update priority
                     queue.add(nab);
                 }
             }
         }
 
-        return findTheRealPath(predecessors, count1, count2);
+        return findTheRealPath(last, count1, count2);
     }
 
 
-
-
-/*
-    public List<String> findPath (String country1, String country2) {
-
-        HashMap<String, Integer> allDistances = createDistanceMap();
-        HashMap<String, Boolean> knownNodes = createKnownMap();
-        HashMap<String, String> pathHash = createPathMap();
-
-        System.out.println("Printing now");
-        printHashMap(allDistances, " ");
-
-        HashMap<String, Integer> copyForQueueRemake = allDistances;
-
-        allDistances.put(country1, 0);
-
-        for (HashMap.Entry<String, Integer> entry : allDistances.entrySet()) {
-            queue.add(entry);
-        }
-
-
-
-
-
-
-        while (true) {
-            HashMap.Entry<String, Integer> vEntry = queue.poll();
-
-            System.out.println("polled: " + vEntry);
-            copyForQueueRemake.remove(vEntry);
-
-            if (vEntry.getKey() == null) {
-                System.out.println("broke");
-                break;
-            }
-
-            String v = vEntry.getKey();
-            Integer vCost = vEntry.getValue();
-            knownNodes.put(v, true);
-            HashMap<String, Integer> bordering = new HashMap<String, Integer>();
-            Set<String> keys = bordering.keySet();
-
-
-            for (String key : keys) {
-
-                HashMap<String, Integer> temp = nameBorderDistance.get(v);
-                if (allDistances.get(key) > (vCost + temp.get(key))) {
-                    allDistances.put(key, vCost + temp.get(key));
-                    for (HashMap.Entry<String, Integer> entry : copyForQueueRemake.entrySet()) {
-                        queue.add(entry);
-                    }
-                    pathHash.put(v, key);
-
-                    PriorityQueue<Map.Entry<String, Integer>> copyQueue = new PriorityQueue<>(queue);
-
-                    while (!copyQueue.isEmpty()) {
-                        Map.Entry<String, Integer> entry = copyQueue.poll();
-                        System.out.println(entry.getKey() + ": " + entry.getValue());
-                    }
-                }
-            }
-
-            if (v == country2) {
-                break;
-            }
-
-        }
-        return null;
-    }
-
-*/
     public void acceptUserInput() {
         // Replace with your code
         Scanner scanner = new Scanner(System.in);
@@ -658,7 +572,7 @@ public class IRoadTrip {
                     done = true;
                     break;
                 }
-                if (noBoarderCountries.contains(firstCountry.toLowerCase())) {
+                if (noBorderCountries.contains(firstCountry.toLowerCase())) {
                     noPath = true;
                     break;
                 }
@@ -681,7 +595,7 @@ public class IRoadTrip {
                     done = true;
                     break;
                 }
-                if (noBoarderCountries.contains(firstCountry.toLowerCase())) {
+                if (noBorderCountries.contains(firstCountry.toLowerCase())) {
                     noPath = true;
                     break;
                 }
