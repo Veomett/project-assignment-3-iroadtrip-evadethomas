@@ -377,20 +377,24 @@ public class IRoadTrip {
 
     }
 
-    //Get distances takes in the distances file that provides information about the length of each path.
+    //Get distances takes in the distances file that provides information about the length of each path from
+    //the capdist file
     public void getDistances(String file) {
+        //Uses buffer-reader and exception to take in the file
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
+                //skips irrelevent line
                 if (line.contains("kmdist")) {
                     continue;
                 }
+                //gets the starting country code, ending code and distance in km
                 String[] capInfo = line.split(",");
                 String country1 = capInfo[1];
                 String country2 = capInfo[3];
 
                 Integer kilom = Integer.parseInt(capInfo[4]);
-
+                //Adds them to the "allDistanceCap" hashmap, same format as the borders hashmap.
                 if (allDistancesCap.get(country1) == null) {
                     HashMap<String, Integer> innerMap = new HashMap<>();
                     innerMap.put(country2, kilom);
@@ -400,8 +404,6 @@ public class IRoadTrip {
                     innerMap.put(country2, kilom);
                 }
             }
-            //printHashMap(allDistancesCap, "  ");
-
         } catch (Exception e) {
             System.out.println("Error collecting file. Printing stack trace for debugging: ");
             e.printStackTrace();
@@ -410,44 +412,15 @@ public class IRoadTrip {
 
     }
 
-    public HashMap<String, Integer> createDistanceMap() {
-        HashMap<String, String> bordersDisSource =  finalNameMap;
-        HashMap<String, Integer> convertedMap = new HashMap<>();
-        for (HashMap.Entry<String, String> entry : finalNameMap.entrySet()) {
-            if (entry.getValue() == null) {
-                continue;
-            }
-            convertedMap.put(entry.getValue(), Integer.MAX_VALUE);
-        }
-        return convertedMap;
-    }
-
-    public HashMap<String, Boolean> createKnownMap() {
-        HashMap<String, String> bordersDisSource =  finalNameMap;
-        HashMap<String, Boolean> convertedMap = new HashMap<>();
-        for (HashMap.Entry<String, String> entry : finalNameMap.entrySet()) {
-            convertedMap.put(entry.getValue(), false);
-        }
-
-        return convertedMap;
-    }
-
-    public HashMap<String, String> createPathMap() {
-        HashMap<String, String> bordersDisSource =  finalNameMap;
-        HashMap<String, String> convertedMap = new HashMap<>();
-        for (HashMap.Entry<String, String> entry : finalNameMap.entrySet()) {
-            convertedMap.put(entry.getValue(), null);
-        }
-
-        return convertedMap;
-    }
-
+    //Takes in the state name file, creates a map of the name to the given country codes
     public void getStateName(String file) {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
+                //Only takes in the current dates
                 if (line.contains("2020-12-31")) {
                     String[] lineArr = line.split("\t");
+                    //adds them to the map
                     stateNameMap.put(lineArr[2].toLowerCase(), lineArr[1]);
                 }
             }
@@ -458,52 +431,62 @@ public class IRoadTrip {
         }
     }
 
-
+    //Get distance takes in two country names, gets their codes, and if they are bordering, returns their distance
     public int getDistance (String country1, String country2) {
+        //Gets the country codes
         country1 = stateNameMap.get(country1);
         country2 = stateNameMap.get(country2);
 
         if (country1 == country2) {
             return 0;
         }
-
-
-
+        //Uses the codes to get the distance from boarderDistance
         HashMap<String, Integer> disMap = nameBorderDistance.get(country1);
-
+        //If its not found, disMap will be null (the inner map with boardering countries)
         if (disMap != null) {
             if (disMap.get(country2) != null) {
+                //return the distance
                 return disMap.get(country2);
             }
         }
-
+        //Otherwise, return -1
         return -1;
     }
+
+    //This walks back through the given set to find the path between one coutry to another, obtained by Dikstra's
+    //Creates a linked list by following the last node in last Hashmap, then formats the list properly in a copy
+    //before returning it
     public List<String> findTheRealPath(HashMap<String, String> last, String country1, String country2) {
+        //Initialize linked list and current to walk through the last values of each "node"/verticie.
         LinkedList<String> path = new LinkedList<>();
         String current = country2;
-
+        //Creating a backwards hashmap to obtain the NAME from the given COUNTRY CODE because
+        //the Hashmap contains country codes not names.
         HashMap<String, String> nameBackMap = new HashMap<>();
         for (Map.Entry<String, String> entry : finalNameMap.entrySet()) {
             nameBackMap.put(entry.getValue(), entry.getKey());
         }
-
+        //While there is still a "last" node, get the current and last node, add found node to the path,
+        //then set current to the node before it.
         while (current != null) {
             path.addFirst(current);
             current = last.get(current);
         }
-
+        //If the path equals the first country, then we know we've found the path. In this case we format it properly.
         if (path.getFirst().equals(country1)) {
+            //Create a new list to hold the formatted paths.
             LinkedList<String> formattedPath = new LinkedList<>();
+            //Walk through the path list, use the country codes to get the names, and use helper capitalize function
+            //to put the capitalization back.
             for (int i = 0; i < path.size() - 1; i++) {
                 String currentElement = capitalizeWords(nameBackMap.get(path.get(i)));
                 String nextElement = capitalizeWords(nameBackMap.get(path.get(i + 1)));
                 HashMap<String, Integer> temp = nameBorderDistance.get(path.get(i));
+                //Get the distance from one place to another using the boarderDistance main map
                 Integer kiloms = temp.get(path.get(i + 1));
-
+                //Finally print it out
                 String finalFormat = currentElement + " --> " + nextElement + " (" + kiloms + " km.)";
                 finalFormat.replaceAll(" Of ", " of ");
-
                 formattedPath.add(finalFormat);
             }
 
