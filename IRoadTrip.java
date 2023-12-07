@@ -472,6 +472,10 @@ public class IRoadTrip {
             path.addFirst(current);
             current = last.get(current);
         }
+        //Added this last min whoops
+        if (country1.equals(country2)) {
+            path.addFirst(country1);
+        }
         //If the path equals the first country, then we know we've found the path. In this case we format it properly.
         if (path.getFirst().equals(country1)) {
             //Create a new list to hold the formatted paths.
@@ -484,24 +488,27 @@ public class IRoadTrip {
                 HashMap<String, Integer> temp = nameBorderDistance.get(path.get(i));
                 //Get the distance from one place to another using the boarderDistance main map
                 Integer kiloms = temp.get(path.get(i + 1));
+                if (country1.equals(country2)) {
+                    kiloms = 0;
+                }
                 //Finally print it out
                 String finalFormat = currentElement + " --> " + nextElement + " (" + kiloms + " km.)";
                 finalFormat.replaceAll(" Of ", " of ");
                 formattedPath.add(finalFormat);
             }
-
             return formattedPath;
         } else {
             return null;
         }
     }
 
-
     public static String capitalizeWords(String given) {
+        //turns string to char array
         char[] arr = given.toCharArray();
         boolean toUpper = false;
-
+        //walk through each letter
         for (int i = 0; i < arr.length; i++) {
+            //if not a letter, the set bool so next letter will capitalize
             if (toUpper && Character.isLetter(arr[i])) {
                 arr[i] = Character.toUpperCase(arr[i]);
                 toUpper = false;
@@ -509,82 +516,120 @@ public class IRoadTrip {
                 toUpper = true;
             }
         }
+        //captilize edge case of first letter.
         arr[0] = Character.toUpperCase(arr[0]);
-
+        //return new result
         return new String(arr);
     }
 
+    //Acutally uses the graph to impliment Dikstra's algorithm. Takes in starting and ending country NAME.
     public List<String> findPath(String country1, String country2) {
 
+        //Get the codes from names in order to obtain edges from clean border and dist. map.
         String count1 = stateNameMap.get(country1);
         String count2 = stateNameMap.get(country2);
 
+        //Create a hashMap that stores the cummulative cost of each path for each node, intilize all to highest cost.
         HashMap<String, Integer> costs = new HashMap<>();
         for (String node : nameBorderDistance.keySet()) {
             costs.put(node, Integer.MAX_VALUE);
         }
-        costs.put(count1, 0); // Set cost for the start node as 0
+        //Set the first country to
+        //insert the first country, with lowest cost of 0 into priority queue of costs. (This allows out starting vertex)
+        costs.put(count1, 0);
 
+        //Initialize last to keep track of path
         HashMap<String, String> last = new HashMap<>();
+        //Initialize known so we know if a node has been visited or not.
         HashSet<String> known = new HashSet<>();
-
+        //Initalize priority queue, using the values of the costs hashMap as a comparator. Keeps track of lowest cost
+        //path for each vertex
         PriorityQueue<String> queue = new PriorityQueue<>(Comparator.comparingInt(costs::get));
+
+        //add the starting country to queue.
         queue.add(count1);
 
+        //While there are still values in the queue
         while (!queue.isEmpty()) {
+            //get the least costly node (will bein as country1)
             String v = queue.poll();
 
+            //If its the vertex we're looking for, we can break early.
             if (v.equals(count2)) {
                 break;
             }
-
+            //If we already know the path for this node, we can skip the rest
             if (known.contains(v)) {
                 continue;
             }
+            //Otherwise, we now know have visited this node and can add it to the visited table
             known.add(v);
 
+            //Get the neighboring countries.
             HashMap<String, Integer> innerMap = nameBorderDistance.get(v);
+
+            //if there are none, no reason to look through them.
             if (innerMap == null) {
                 continue; // Handle potential null values
             }
 
+            //for each neighboring country...
             for (String nab : innerMap.keySet()) {
+                //Get the cummulative cost of path so far
                 int cumulCost = costs.get(v) + innerMap.get(nab);
+
+                //if the cummulative cost is the least expensive compared to it's neighbors, update it.
                 if (cumulCost < costs.get(nab)) {
+                    //update costs
                     costs.put(nab, cumulCost);
+                    //update node v as previous for neighbor we found
                     last.put(nab, v);
-                    queue.remove(nab); // Remove and re-add to update priority
+                    //remove from the priority queue
+                    queue.remove(nab);
+                    //re-add it to get the right priority.
                     queue.add(nab);
                 }
             }
         }
 
+        //return the table with the paths, and country1 and 2. The table is updated so the
+        //value of country 2 on the "last" country hashmap will lead to the least-expensive path.
+
         return findTheRealPath(last, count1, count2);
     }
 
-
+    //take in the user input (called by the instance)
     public void acceptUserInput() {
         // Replace with your code
+        //Open scanner
         Scanner scanner = new Scanner(System.in);
+        //Used if the user types in EXIT
         boolean done = false;
-
-
+        //Until exit, trap them in infinite loop
         while (true) {
+            //Set noPath to false for single country handling
             boolean noPath = false;
-            // Read user input
+
+            //Intialize first country
             String firstCountry;
+            //While they have an invalid input and exit isn't typed, it'll keep asking for the first country
             while (true) {
                 System.out.print("Enter the name of the first country (type EXIT to quit): ");
+                //Get user input for first country
                 firstCountry = scanner.nextLine();
                 if (firstCountry.equals("EXIT")) {
                     done = true;
                     break;
                 }
+                //Set input to lowercase for error handling, if lonely country, it will end loop and set no path for
+                //no path response.
                 if (noBorderCountries.contains(firstCountry.toLowerCase())) {
                     noPath = true;
                     break;
                 }
+
                 firstCountry = firstCountry.toLowerCase();
+                //Handles bad input
                 if (stateNameMap.get(firstCountry) == null) {
                     System.out.println("Invalid country name. Please enter a valid country name.");
                 } else {
@@ -592,9 +637,11 @@ public class IRoadTrip {
                 }
 
             }
+            //If exit typed, break.
             if (done) {
                 break;
             }
+            //Works the same as first country
             String secondCountry;
             while (true) {
                 System.out.print("Enter the name of the second country (type EXIT to quit): ");
@@ -617,6 +664,7 @@ public class IRoadTrip {
             if (done) {
                 break;
             }
+            //Handles single countries.
             if (noPath == true) {
                 System.out.println("No path found");
                 break;
@@ -625,7 +673,9 @@ public class IRoadTrip {
             It probably would be better to take in the codes here, but since IDK how the grading works I'm just feeding
             the country names and will re-get them in path.
              */
+            //Get the path
             List<String> path = findPath(firstCountry, secondCountry);
+            //Either print the path or that it's not found
             if (path == null) {
                 System.out.println("No path found.");
             } else {
@@ -637,11 +687,9 @@ public class IRoadTrip {
             //NOTE : Add function here to handle USA.
             // Output the input received from the user
         }
+        //close scanner
         scanner.close();
-
-        // Close the scanner
-
-
+        //Exit.
         System.out.println("IRoadTrip - skeleton");
     }
 
