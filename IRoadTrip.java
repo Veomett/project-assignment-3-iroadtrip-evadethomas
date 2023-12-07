@@ -23,13 +23,7 @@ public class IRoadTrip {
 
 
     public IRoadTrip (String [] args) {
-        /*
-        HashMap<String, HashMap<String, Integer>> boarderMap = new HashMap<>();
-        HashMap<String, String> idMap = new HashMap<>();
-        idMap = getIDs();
-        boarderMap = getInfoBorders(idMap);
-        HashMap<String, String> idMapFinal = new HashMap<>();
-         */
+
         stateNameMap = new HashMap<>();
         finalNameMap = new HashMap<>();
         nameBorderDistance = new HashMap<>();
@@ -42,9 +36,6 @@ public class IRoadTrip {
         Comparator<Map.Entry<String, Integer>> comparator = OGcomparator.reversed();
         queue = new  PriorityQueue<HashMap.Entry<String, Integer>>(comparator);
 
-
-        System.out.println(args[0]);
-
         getStateName(args[2]);
         getBoardersName(args[0]);
         getDistances(args[1]);
@@ -55,10 +46,6 @@ public class IRoadTrip {
         handleNotFoundHashMap();
         rewriteNameBorderDistanceWithIds();
         IDsPointToSelves();
-
-
-
-
 
     }
 
@@ -474,16 +461,11 @@ public class IRoadTrip {
 
         HashMap<String, Integer> disMap = nameBorderDistance.get(country1);
 
-
-
-        System.out.println(country1);
-        System.out.println(country2);
         if (disMap != null) {
             if (disMap.get(country2) != null) {
                 return disMap.get(country2);
             }
         }
-
 
         return -1;
     }
@@ -491,14 +473,52 @@ public class IRoadTrip {
         LinkedList<String> path = new LinkedList<>();
         String current = country2;
 
+        Map<String, String> reversedMap = new HashMap<>();
+        for (Map.Entry<String, String> entry : finalNameMap.entrySet()) {
+            reversedMap.put(entry.getValue(), entry.getKey());
+        }
+
         while (current != null) {
             path.addFirst(current);
             current = predecessors.get(current);
         }
+
         if (path.getFirst().equals(country1)) {
-            return path;
+            LinkedList<String> formattedPath = new LinkedList<>();
+            for (int i = 0; i < path.size() - 1; i++) {
+                String currentElement = capitalizeWords(reversedMap.get(path.get(i)));
+                String nextElement = capitalizeWords(reversedMap.get(path.get(i + 1)));
+                HashMap<String, Integer> temp = nameBorderDistance.get(path.get(i));
+                Integer kiloms = temp.get(path.get(i + 1));
+
+                String finalFormat = currentElement + " --> " + nextElement + " (" + kiloms + "km.)";
+                finalFormat.replaceAll(" Of ", " of ");
+
+                formattedPath.add(finalFormat);
+            }
+
+            return formattedPath;
+        } else {
+            return null;
         }
-        return null;
+
+    }
+
+    public static String capitalizeWords(String given) {
+        char[] arr = given.toCharArray();
+        boolean toUpper = false;
+
+        for (int i = 0; i < arr.length; i++) {
+            if (toUpper && Character.isLetter(arr[i])) {
+                arr[i] = Character.toUpperCase(arr[i]);
+                toUpper = false;
+            } else if (!Character.isLetter(arr[i])) {
+                toUpper = true;
+            }
+        }
+        arr[0] = Character.toUpperCase(arr[0]);
+
+        return new String(arr);
     }
 
     public List<String> findPath(String country1, String country2) {
@@ -646,8 +666,6 @@ public class IRoadTrip {
                 if (stateNameMap.get(firstCountry) == null) {
                     System.out.println("Invalid country name. Please enter a valid country name.");
                 } else {
-                    //EVA take this out before submission
-                    System.out.println(stateNameMap.get(firstCountry));
                     break;
                 }
 
@@ -671,8 +689,6 @@ public class IRoadTrip {
                 if (stateNameMap.get(secondCountry) == null) {
                     System.out.println("Invalid country name. Please enter a valid country name.");
                 } else {
-                    //EVA take this out before submission
-                    System.out.println(stateNameMap.get(secondCountry));
                     break;
                 }
             }
@@ -688,8 +704,6 @@ public class IRoadTrip {
             the country names and will re-get them in path.
              */
             List<String> path = findPath(firstCountry, secondCountry);
-
-            System.out.println("Distance: " + getDistance(firstCountry, secondCountry));
             if (path == null) {
                 System.out.println("No path found.");
             } else {
