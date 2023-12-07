@@ -191,72 +191,82 @@ public class IRoadTrip {
         // will add to finalNameMap
 
     }
+
+    //This function goes through the stateName map, and modified and adds other possible aliases that are formatted
+    //differently.
     public void addOtherPossibleNames() {
+        //Create a temp map so updated values can be added post-iteration
         HashMap<String, String> tempMap = new HashMap<>();
-
+        //Run through the keys of the stateMap hash table.
         for (String key : stateNameMap.keySet()) {
-
             String name = key;
-            //The case a name contains parenthesis
+            //If a name contians parenthesis, get out the both of the names
             boolean commaHandled = false;
             if (name.contains("(")) {
-
                 String[] parens = name.split("\\(");
                 String left = parens[0].trim().toLowerCase();
+                //Add the left of the parens to the possible names
                 tempMap.put(left, stateNameMap.get(name));
-                //The case either side of the parenthesis contains a comma
+                //Check if the left contains a comma, if it does, reformat and add to stateName as possible alias
                 if (left.contains(",")) {
                     String[] comArr = left.split(",");
                     left = comArr[1].trim() + " " + comArr[0];
                     tempMap.put(left, stateNameMap.get(name));
                     commaHandled = true;
                 }
-
+                //Get the right, add as an alias
                 String right = parens[1].substring(0, parens[1].length() - 1).toLowerCase();
                 tempMap.put(right, stateNameMap.get(name));
-
+                //Same as above with commas but for the right side.
                 if (right.contains(",")) {
                     String[] comArr = right.split(",");
                     right = comArr[1].trim() + " " + comArr[0];
                     tempMap.put(right, stateNameMap.get(name));
                     commaHandled = true;
                 }
-
             }
-            //The case it contains a comma AND paren hasn't been handled yet
+            //Handles commas for non-parenthesis names
             if (name.contains(",") && commaHandled == false) {
                 String[] comArr = name.split(",");
                 String newName = comArr[1].trim() + " " + comArr[0];
                 tempMap.put(newName, stateNameMap.get(name));
             }
-
+            //Fixes the cot d'ivore problem, different types of apostrophies.
             if (name.contains("’")) {
                 String newName = name.replace("’", "'");
                 tempMap.put(newName, stateNameMap.get(name));
             }
-
+            //Gets both names when there's a slash, (left and right like parens)
             if (name.contains("/")) {
                 String[] slashArr = name.split("/");
                 tempMap.put(slashArr[0].trim(), stateNameMap.get(name));
                 tempMap.put(slashArr[1].trim(), stateNameMap.get(name));
             }
-
         }
+        //Add all the tempNames to the stateNameMap
         stateNameMap.putAll(tempMap);
     }
 
+    //This takes in the finalNameMap, that at this point only has the border NAMES and all of the distances
+    //on the inside are set to 0. This function ensures that all the border names are also included in the possibleAlias
+    //(stateName map) to ensure data is consistant. It finds names that don't have a matching ID, and tries to
+    //re-arrange and find a matching ID. If it doensn't work, it adds them to "not found" which is a list of borders
+    //with unknown country names to be fixed later.
     public void setIDsForfinalNameMap() {
-
+        //Iterating through the keys of the finalNameMap, retrieved from the border file.
         for (String key : finalNameMap.keySet()) {
+            //Initializing a tempMap so it can be changed later, after incrimentation.
             HashMap<String, String> tempMap = new HashMap<>();
 
             String name = key;
+            //Use the country name to look through the possible aliases and get the 3-letter IDs
             String ID = stateNameMap.get(name);
+
+            //Add the name in-case it has not been found in the stateName map that includes all possible
+            // names yet (will update value later)
             tempMap.put(name, null);
-            boolean commaHandled = false;
             //Check for parenthesis
-
-
+            //Handles parenthesis like the other function, adding the inner and outer names to the state name map
             if (name.contains("(") && ID == null) {
                 String[] parens = name.split("\\(");
 
@@ -274,6 +284,7 @@ public class IRoadTrip {
                 }
             }
 
+            //Handles the commas, tries to find an ID when commas are moved around.
             String newName = name;
             if (name.contains(",") && ID == null) {
                 String[] comArr = name.split(",");
@@ -281,7 +292,7 @@ public class IRoadTrip {
                 ID = stateNameMap.get(newName);
                 tempMap.put(newName, null);
             }
-
+            //Moves around the thes, tries to find a matching ID without thes
             if ((name.contains("the ") || name.contains(" the")) && ID == null) {
                 String newName1 = name.replace("the", "").trim();
                 ID = stateNameMap.get(newName1);
@@ -292,7 +303,7 @@ public class IRoadTrip {
                     tempMap.put(newName, null);
                 }
             }
-
+            //If the ID, after all the checks isn't null anymore, then get the ID from state-name and set it correctly
             if (ID != null) {
 
                 for (String theKey : tempMap.keySet()) {
@@ -302,26 +313,31 @@ public class IRoadTrip {
                 stateNameMap.putAll(tempMap);
                 finalNameMap.put(name, ID);
             } else {
+                //Otherwise, add it to "notFound", ID is always null here.
                 notFound.put(name, ID);
             }
         }
-
-        //printHashMap(finalNameMap, "    ");
-        //System.out.println("Not found");
-        //printHashMap(notFound, "    ");
     }
 
+    //Get borders name takes in the boarders file, and creates a hashmap of hashmaps. The outer being country1,
+    //country2 being the destination bordering country, and the distance is initialized to null for now.
     public void getBoardersName(String file) {
+        //Uses buffered reader with exception catch to read thorugh each line in the file.
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
+                //Split the border file with the equals sign
                 String[] origin = line.split(" = ");
                 if (origin.length > 1) {
+                    //Take out the km
                     String[] destinationsArr = origin[1].split(" km; ");
+                    //Innitialize the inner maps
                     HashMap<String, Integer> destMap = new HashMap<>();
                     for (int i = 0; i < destinationsArr.length; i++) {
+                        //Iterate through the rest of the borders, following the equals sign using split with space
                         String[] dest = destinationsArr[i].split(" ");
                         String finalDest = "";
+                        //this loop skips the border distance/irrelevnt information
                         for (int j = 0; j < dest.length; j++) {
                             if (Character.isDigit(dest[j].charAt(0)) == false) {
                                 finalDest += dest[j];
@@ -331,10 +347,13 @@ public class IRoadTrip {
                                 break;
                             }
                         }
+                        //Add the inner map to the outer map, initlaize all distances to 0 since its unknown.
                         destMap.put(finalDest.toLowerCase(), 0);
                     }
+                    //Add to the global final hashmap
                     nameBorderDistance.put(origin[0].toLowerCase(), destMap);
                 } else {
+                    //If there is not a right side, then there are no bordering countries. Adding it here.
                     noBorderCountries.add(origin[0].toLowerCase());
                 }
             }
@@ -343,22 +362,22 @@ public class IRoadTrip {
             e.printStackTrace();
             exit(0);
         }
-        //printHashMap(nameBorderDistance, "  ");
-
+        //Creates a "finalNameMap" which reads the keys and the values, getting all the countries and putting them
+        //in one hashmap to help match them to their country codes. Having this hashmap enables easier access to the IDs
+        //and in turn the ability to implement Dijerkas. (maps borderName -> null, which eventually will be a country
+        //code.
         for (Map.Entry<String, HashMap<String, Integer>> outerEntry : nameBorderDistance.entrySet()) {
             String outerKey = outerEntry.getKey();
             HashMap<String, Integer> innerMap = outerEntry.getValue();
             finalNameMap.put(outerKey, null);
-
             for (String innerKey : innerMap.keySet()) {
                 finalNameMap.put(innerKey, null);
             }
         }
 
-        //printHashMap(finalNameMap, "  ");
-
     }
 
+    //Get distances takes in the distances file that provides information about the length of each path.
     public void getDistances(String file) {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
